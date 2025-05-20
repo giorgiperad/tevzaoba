@@ -189,19 +189,16 @@
             color: #666;
         }
         
-        /* Wind direction arrow */
         .wind-arrow {
             display: inline-block;
             transform-origin: center;
         }
         
-        /* Weather icons */
         .weather-icon {
             font-size: 24px;
             margin-bottom: 5px;
         }
         
-        /* Fishing quality indicators */
         .fishing-quality {
             display: inline-block;
             width: 10px;
@@ -250,7 +247,7 @@
         
         <div class="info-section">
             <h3>თევზაობის პირობების განმარტება</h3>
-            <p>თევზაობისთვის საუკეთესო პირობები მოიცავს: სტაბილურ წნევას (990-1020 hPa), ტემპერატურას 15-22°C, დაბალ ქარს (&lt;15 კმ/სთ), და მცირე ან საშუალო ღრუბლიანობას. სოლუნარული თეორიის თანახმად, მთვარის ციკლი გავლენას ახდენს თევზების აქტიურობაზე. მთავარი და მეორეხარისხოვანი კვების პერიოდები წარმოადგენს დროის მონაკვეთებს, როდესაც თევზჭერის შანსი იზრდება.</p>
+            <p>თევზაობისთვის საუკეთესო პირობები მოიცავს: სტაბილურ წნევას (990-1020 hPa), ტემპერატურას 15-22°C, დაბალ ქარს (<15 კმ/სთ), და მცირე ან საშუალო ღრუბლიანობას. სოლუნარული თეორიის თანახმად, მთვარის ციკლი გავლენას ახდენს თევზების აქტიურობაზე. მთავარი და მეორეხარისხოვანი კვების პერიოდები წარმოადგენს დროის მონაკვეთებს, როდესაც თევზჭერის შანსი იზრდება.</p>
         </div>
     </div>
     
@@ -292,83 +289,69 @@
                 timeZone: 'Asia/Tbilisi'
             }
         };
-        
-        // Simulated data generator function (since we don't have real API access)
-        function generateWeatherData(location, startDate) {
+
+        // Replace with your OpenWeatherMap API key
+        const API_KEY = 'b5f3b44e0ff36c689aa09e1c5f227d6d'; // Get your API key from https://openweathermap.org/api
+
+        // Fetch weather data from OpenWeatherMap
+        async function fetchWeatherData(location, startDate) {
+            const lat = LOCATIONS[location].lat;
+            const lon = LOCATIONS[location].lon;
+            const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`;
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                return parseWeatherData(data, startDate);
+            } catch (error) {
+                console.error('Error fetching weather data:', error);
+                document.getElementById('forecast-container').innerHTML = '<div class="loading">მონაცემების ჩატვირთვა ვერ მოხერხდა</div>';
+                return [];
+            }
+        }
+
+        // Parse OpenWeatherMap data into the required format
+        function parseWeatherData(apiData, startDate) {
             const data = [];
-            const baseTemp = {
-                tbilisi: 22,
-                sioni: 20,
-                tsalka: 17,
-                bazaleti: 19,
-                nadarbazevi: 21
-            }[location] || 20;
-            
-            const basePressure = {
-                tbilisi: 1015,
-                sioni: 1010,
-                tsalka: 1005,
-                bazaleti: 1012,
-                nadarbazevi: 1014
-            }[location] || 1010;
-            
-            // Generate 5 days of data
+            const forecastList = apiData.list;
+
+            // Process 5 days of data
             for (let day = 0; day < 5; day++) {
                 const currentDate = new Date(startDate);
                 currentDate.setDate(startDate.getDate() + day);
-                
-                // Generate 24 hours of data for each day
-                for (let hour = 0; hour < 24; hour++) {
-                    const hourDate = new Date(currentDate);
-                    hourDate.setHours(hour);
-                    
-                    // Temperature varies by hour and has some randomness
-                    // Lowest at around 5-6 AM, highest at around 2-3 PM
-                    let hourlyVariation = Math.sin((hour - 5) * (Math.PI / 12)) * 5;
-                    if (hourlyVariation < 0) hourlyVariation = 0;
-                    const temperature = baseTemp + hourlyVariation + (Math.random() * 2 - 1);
-                    
-                    // Wind tends to be higher during the day
-                    const dayFactor = (hour >= 8 && hour <= 18) ? 1.5 : 1;
-                    const windSpeed = (3 + Math.random() * 12) * dayFactor;
-                    
-                    // Wind direction changes gradually
-                    const windDirection = (day * 45 + hour * 15) % 360;
-                    
-                    // Precipitation more likely in afternoon/evening
-                    let precipProbability = 0;
-                    if (hour >= 14 && hour <= 20) {
-                        precipProbability = Math.random() * 40;
-                    } else {
-                        precipProbability = Math.random() * 15;
-                    }
-                    
-                    // Amount of precipitation depends on probability
-                    const precipAmount = precipProbability > 20 ? (Math.random() * 2) : 0;
-                    
-                    // Humidity is inverse to temperature somewhat
-                    const humidity = 70 - (hourlyVariation * 2) + (Math.random() * 15);
-                    
-                    // Cloud cover correlates somewhat with precipitation chance
-                    const cloudCover = precipProbability * 1.5 + (Math.random() * 30);
-                    
-                    // Pressure varies slightly throughout the day
-                    const pressure = basePressure + Math.sin(hour * (Math.PI / 12)) * 2 + (Math.random() * 3 - 1.5);
-                    
-                    // UV index follows the sun
-                    let uvIndex = 0;
-                    if (hour >= 7 && hour <= 19) {
-                        uvIndex = Math.sin((hour - 7) * (Math.PI / 12)) * 10;
-                    }
-                    
-                    // Solunar data - major and minor feeding periods
-                    // Major periods are approximately 2 hours each, twice a day
-                    // We'll simulate based on moon phases using the day number
+
+                // Filter forecast data for the current day
+                const dayData = forecastList.filter(item => {
+                    const itemDate = new Date(item.dt * 1000);
+                    return itemDate.getDate() === currentDate.getDate() &&
+                           itemDate.getMonth() === currentDate.getMonth() &&
+                           itemDate.getFullYear() === currentDate.getFullYear();
+                });
+
+                dayData.forEach(item => {
+                    const hourDate = new Date(item.dt * 1000);
+                    const hour = hourDate.getHours();
+
+                    // Extract weather parameters
+                    const temperature = parseFloat(item.main.temp.toFixed(1));
+                    const windSpeed = parseFloat(item.wind.speed.toFixed(1));
+                    const windDirection = Math.round(item.wind.deg);
+                    const precipProbability = item.pop ? Math.round(item.pop * 100) : 0;
+                    const precipAmount = item.rain ? item.rain['3h'] || 0 : 0;
+                    const humidity = Math.round(item.main.humidity);
+                    const cloudCover = item.clouds.all;
+                    const pressure = Math.round(item.main.pressure);
+                    const uvIndex = item.uvi || 0; // Note: UV index may require a separate API call
+
+                    // Solunar data (unchanged from original)
                     const majorPeriodMorning = (day * 50 + 6) % 24;
                     const majorPeriodEvening = (majorPeriodMorning + 12) % 24;
                     const minorPeriodMorning = (majorPeriodMorning + 6) % 24;
                     const minorPeriodEvening = (majorPeriodEvening + 6) % 24;
-                    
+
                     const isMajorPeriod = 
                         (hour >= majorPeriodMorning && hour < majorPeriodMorning + 2) || 
                         (hour >= majorPeriodEvening && hour < majorPeriodEvening + 2);
@@ -376,48 +359,41 @@
                     const isMinorPeriod = 
                         (hour >= minorPeriodMorning && hour < minorPeriodMorning + 1) || 
                         (hour >= minorPeriodEvening && hour < minorPeriodEvening + 1);
-                    
-                    // Calculate fishing quality based on weather parameters
+
+                    // Calculate fishing quality
                     let fishingQuality = 'poor';
                     let qualityScore = 0;
-                    
-                    // Ideal temperature (15-22°C)
+
                     if (temperature >= 15 && temperature <= 22) {
                         qualityScore += 2;
                     } else if (temperature >= 10 && temperature <= 25) {
                         qualityScore += 1;
                     }
-                    
-                    // Wind speed (lower is better for fishing)
+
                     if (windSpeed < 8) {
                         qualityScore += 2;
                     } else if (windSpeed < 15) {
                         qualityScore += 1;
                     }
-                    
-                    // Precipitation (light rain can be good)
+
                     if (precipProbability < 10 || (precipProbability < 30 && precipAmount < 0.5)) {
                         qualityScore += 1;
                     }
-                    
-                    // Barometric pressure (stable is good)
+
                     if (pressure >= 1010 && pressure <= 1020) {
                         qualityScore += 1;
                     }
-                    
-                    // Cloud cover (partial clouds often better than full sun or overcast)
+
                     if (cloudCover >= 30 && cloudCover <= 70) {
                         qualityScore += 1;
                     }
-                    
-                    // Solunar periods boost quality
+
                     if (isMajorPeriod) {
                         qualityScore += 3;
                     } else if (isMinorPeriod) {
                         qualityScore += 2;
                     }
-                    
-                    // Determine quality category
+
                     if (qualityScore >= 8) {
                         fishingQuality = 'excellent';
                     } else if (qualityScore >= 6) {
@@ -425,29 +401,29 @@
                     } else if (qualityScore >= 4) {
                         fishingQuality = 'fair';
                     }
-                    
+
                     data.push({
                         date: hourDate,
                         hour: hour,
-                        temperature: parseFloat(temperature.toFixed(1)),
-                        windSpeed: parseFloat(windSpeed.toFixed(1)),
-                        windDirection: Math.round(windDirection),
-                        precipProbability: Math.round(precipProbability),
-                        precipAmount: parseFloat(precipAmount.toFixed(1)),
-                        humidity: Math.round(humidity),
-                        cloudCover: Math.round(cloudCover),
-                        pressure: Math.round(pressure),
+                        temperature: temperature,
+                        windSpeed: windSpeed,
+                        windDirection: windDirection,
+                        precipProbability: precipProbability,
+                        precipAmount: precipAmount,
+                        humidity: humidity,
+                        cloudCover: cloudCover,
+                        pressure: pressure,
                         uvIndex: parseFloat(uvIndex.toFixed(1)),
                         isMajorPeriod: isMajorPeriod,
                         isMinorPeriod: isMinorPeriod,
                         fishingQuality: fishingQuality
                     });
-                }
+                });
             }
-            
+
             return data;
         }
-        
+
         // Format date in Georgian
         function formatDate(date) {
             const days = ['კვირა', 'ორშაბათი', 'სამშაბათი', 'ოთხშაბათი', 'ხუთშაბათი', 'პარასკევი', 'შაბათი'];
@@ -455,12 +431,12 @@
             
             return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]}`;
         }
-        
+
         // Format time in HH:MM format
         function formatTime(date) {
             return date.toLocaleTimeString('ka-GE', { hour: '2-digit', minute: '2-digit', hour12: false });
         }
-        
+
         // Convert wind direction to arrow and text
         function getWindDirection(degrees) {
             const directions = ['ჩრდ', 'ჩრდ-აღმ', 'აღმ', 'სამხ-აღმ', 'სამხ', 'სამხ-დას', 'დას', 'ჩრდ-დას'];
@@ -471,7 +447,7 @@
                 arrowStyle: `transform: rotate(${degrees}deg)`
             };
         }
-        
+
         // Get weather icon based on cloud cover and precipitation
         function getWeatherIcon(cloudCover, precipProb, precipAmount) {
             if (precipProb > 30 && precipAmount > 0.5) {
@@ -486,7 +462,7 @@
                 return '☀️';
             }
         }
-        
+
         // Generate day buttons
         function generateDayButtons(startDate) {
             const container = document.getElementById('date-select');
@@ -515,7 +491,7 @@
                 container.appendChild(btn);
             }
         }
-        
+
         // Render weather forecast for selected day
         function renderDayForecast(dayIndex) {
             const container = document.getElementById('forecast-container');
@@ -574,7 +550,6 @@
                 const hourDate = new Date(hourData.date);
                 const windDir = getWindDirection(hourData.windDirection);
                 
-                // Add quality indicator
                 let qualityClass = 'quality-' + hourData.fishingQuality;
                 let qualityLabel = '';
                 switch(hourData.fishingQuality) {
@@ -665,13 +640,11 @@
                         <tbody>
             `;
             
-            // Add rows for each three hours to keep table compact
             for (let i = 0; i < dayData.length; i += 3) {
                 const hourData = dayData[i];
                 const hourDate = new Date(hourData.date);
                 const windDir = getWindDirection(hourData.windDirection);
                 
-                // Quality indicator
                 let qualityLabel = '';
                 switch(hourData.fishingQuality) {
                     case 'excellent': qualityLabel = 'საუკეთესო'; break;
@@ -708,85 +681,55 @@
                 </div>
             `;
             
-            html += '</div>'; // End of fishing conditions
+            html += '</div>';
             
             container.innerHTML = html;
         }
-        
+
         // Global variables
         let weatherData = [];
-        const startDate = new Date(2025, 4, 20); // May 20, 2025
-        
+        const startDate = new Date(); // Use current date
+
         // Load weather data for the selected location
-        function loadLocationData() {
+        async function loadLocationData() {
             const locationId = document.getElementById('location-select').value;
             
             // Show loading indicator
             document.getElementById('forecast-container').innerHTML = '<div class="loading">მონაცემების ჩატვირთვა...</div>';
             
-            // Simulate API delay
-            setTimeout(() => {
-                // Generate weather data
-                weatherData = generateWeatherData(locationId, startDate);
-                
-                // Generate day buttons
-                generateDayButtons(startDate);
-                
-                // Render first day forecast
-                renderDayForecast(0);
-                
-                // Update time
-                const now = new Date();
-                document.getElementById('update-time').textContent = now.toLocaleString('ka-GE', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric'
-                });
-            }, 500);
+            // Fetch weather data
+            weatherData = await fetchWeatherData(locationId, startDate);
+            
+            // Generate day buttons
+            generateDayButtons(startDate);
+            
+            // Render first day forecast
+            renderDayForecast(0);
+            
+            // Update time
+            const now = new Date();
+            document.getElementById('update-time').textContent = now.toLocaleString('ka-GE', {
+                hour: '2-digit',
+                minute: '2-digit',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
         }
-        
+
         // Initialize the app
         document.addEventListener('DOMContentLoaded', function() {
-            // Set up location selector event listener
             document.getElementById('location-select').addEventListener('change', loadLocationData);
             
             // Load initial data
             loadLocationData();
             
-            // Set up timer to simulate live data
-            setInterval(() => {
-                // Update last refresh time
-                const now = new Date();
-                document.getElementById('update-time').textContent = now.toLocaleString('ka-GE', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric'
-                });
-                
-                // Slightly modify some values to simulate data refresh
-                if (weatherData.length > 0) {
-                    const currentDay = parseInt(document.querySelector('.date-btn.active').getAttribute('data-day'));
-                    
-                    // Add small variations to temperature, wind, etc.
-                    weatherData.forEach(hourData => {
-                        hourData.temperature += (Math.random() * 0.4) - 0.2;
-                        hourData.temperature = parseFloat(hourData.temperature.toFixed(1));
-                        
-                        hourData.windSpeed += (Math.random() * 0.6) - 0.3;
-                        hourData.windSpeed = parseFloat(hourData.windSpeed.toFixed(1));
-                        
-                        hourData.pressure += (Math.random() * 0.6) - 0.3;
-                        hourData.pressure = Math.round(hourData.pressure);
-                    });
-                    
-                    // Re-render current day
-                    renderDayForecast(currentDay);
-                }
-            }, 60000); // Update every minute
+            // Set up timer to refresh data every 30 minutes
+            setInterval(async () => {
+                const currentDay = parseInt(document.querySelector('.date-btn.active').getAttribute('data-day'));
+                await loadLocationData();
+                renderDayForecast(currentDay);
+            }, 1800000); // 30 minutes
         });
     </script>
 </body>
